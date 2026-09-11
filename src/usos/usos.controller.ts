@@ -40,6 +40,15 @@ export class UsosController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUsoDto: UpdateUsoDto) {
+    if (
+      updateUsoDto.nombre !== undefined &&
+      updateUsoDto.nombre.trim() === ''
+    ) {
+      throw new ConflictException('El nombre del uso no puede estar vacío.');
+    }
+    if (updateUsoDto.nombre === undefined) {
+      throw new ConflictException('El nombre del uso es obligatorio.');
+    }
     return this.usosService.update(+id, updateUsoDto);
   }
 

@@ -25,11 +25,26 @@ export class UsosService {
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} uso`;
+    const uso = this.usos.find((uso) => uso.id === id);
+    if (!uso) {
+      throw new NotFoundException(`El uso con ID ${id} no existe.`);
+    }
+    return uso;
   }
 
   update(id: number, updateUsoDto: UpdateUsoDto) {
-    return `This action updates a #${id} uso`;
+    const uso = this.usos.find((uso) => uso.id === id);
+    if (!uso) {
+      throw new NotFoundException(`El uso con ID ${id} no existe.`);
+    }
+
+    const nombreActualizado: string =
+      typeof updateUsoDto.nombre === 'string'
+        ? updateUsoDto.nombre
+        : uso.nombre;
+
+    uso.nombre = nombreActualizado;
+    return uso;
   }
 
   remove(id: number) {
