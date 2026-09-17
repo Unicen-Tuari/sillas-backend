@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: sillasDB
       POSTGRES_USER: sillasAdmin
       POSTGRES_PASSWORD: secretPassword123!
+    volumes:
+      - ./data:/var/lib/postgresql
 
   adminer:
     image: adminer
