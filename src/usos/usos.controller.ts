@@ -17,8 +17,8 @@ export class UsosController {
   constructor(private readonly usosService: UsosService) {}
 
   @Post()
-  create(@Body() createUsoDto: CreateUsoDto) {
-    const usos = this.usosService.findAll();
+  async create(@Body() createUsoDto: CreateUsoDto) {
+    const usos = await this.usosService.findAll();
     const existingUso = usos.find((uso) => uso.nombre === createUsoDto.nombre);
     if (existingUso) {
       throw new ConflictException(

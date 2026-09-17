@@ -2,57 +2,64 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUsoDto } from './dto/create-uso.dto';
 import { UpdateUsoDto } from './dto/update-uso.dto';
 import { Uso } from './entities/uso.entity';
-import { NotFoundError, throwError } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class UsosService {
-  private usos: Uso[] = [
-    new Uso(1, 'Living'),
-    new Uso(2, 'Dormitorio'),
-    new Uso(3, 'Cocina'),
-    new Uso(4, 'Oficina'),
-    new Uso(5, 'Educación'),
-  ]; // In-memory storage for usos
+  constructor(
+    @InjectRepository(Uso) private readonly usoRepository: Repository<Uso>,
+  ) {}
 
   create(createUsoDto: CreateUsoDto) {
-    const newUso = new Uso(this.usos.length + 1, createUsoDto.nombre);
-    this.usos.push(newUso);
-    return newUso;
+    return this.usoRepository.save(createUsoDto).catch((error) => {
+      throw new NotFoundException(
+        `Error al guardar el uso en la base de datos: ${error.message}`,
+      );
+    });
   }
 
   findAll() {
-    return this.usos;
+    return this.usoRepository.find().catch((error) => {
+      throw new NotFoundException(
+        `Error al obtener los usos de la base de datos: ${error.message}`,
+      );
+    });
   }
 
   findOne(id: number) {
-    const uso = this.usos.find((uso) => uso.id === id);
-    if (!uso) {
-      throw new NotFoundException(`El uso con ID ${id} no existe.`);
-    }
-    return uso;
+    return this.usoRepository.findOne({ where: { id } }).catch((error) => {
+      throw new NotFoundException(
+        `Error al obtener el uso de la base de datos: ${error.message}`,
+      );
+    });
   }
 
-  update(id: number, updateUsoDto: UpdateUsoDto) {
-    const uso = this.usos.find((uso) => uso.id === id);
-    if (!uso) {
-      throw new NotFoundException(`El uso con ID ${id} no existe.`);
+  async update(id: number, updateUsoDto: UpdateUsoDto) {
+    const result = this.usoRepository.update(id, updateUsoDto).catch((error) => {
+      throw new NotFoundException(
+        `Error al actualizar el uso en la base de datos: ${error.message}`,
+      );
+    });
+    if ((await result).affected === 0) {
+      throw new NotFoundException(`Uso con id ${id} no encontrado.`);
     }
-
-    const nombreActualizado: string =
-      typeof updateUsoDto.nombre === 'string'
-        ? updateUsoDto.nombre
-        : uso.nombre;
-
-    uso.nombre = nombreActualizado;
-    return uso;
+    return this.findOne(id);
   }
 
-  remove(id: number) {
-    const index = this.usos.findIndex((uso) => uso.id === id);
-    if (index === -1) {
-      throw new NotFoundException(`El uso con ID ${id} no existe.`);
+  async remove(id: number) {
+    const uso = await this.findOne(id);
+    if (!uso) {
+      throw new NotFoundException(`Uso con id ${id} no encontrado.`);
     }
-    this.usos.splice(index, 1);
-    return `El uso con ID ${id} ha sido eliminado.`;
+    this.usoRepository.delete(id).catch((error) => {
+      throw new NotFoundException(
+        `Error al eliminar el uso de la base de datos: ${error.message}`,
+      );
+    });
+    return {
+      message: `Uso ${uso.nombre} eliminado exitosamente.`,
+      status: 'success',
+    }
   }
 }
