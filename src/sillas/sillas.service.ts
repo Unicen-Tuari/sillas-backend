@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateSillaDto } from './dto/create-silla.dto';
 import { UpdateSillaDto } from './dto/update-silla.dto';
 import { Silla } from './entities/silla.entity';
@@ -6,72 +8,84 @@ import { UsosService } from '../usos/usos.service';
 
 @Injectable()
 export class SillasService {
-  private sillas: Silla[] = []; // In-memory storage for sillas
+  constructor(
+    @InjectRepository(Silla) private readonly sillaRepository: Repository<Silla>,
+    private readonly usosService: UsosService,
+  ) {}
 
-  constructor(private readonly usosService: UsosService) {}
+  async create(createSillaDto: CreateSillaDto) {
+    await this.usosService.findOne(createSillaDto.uso_id);
 
-  create(createSillaDto: CreateSillaDto) {
-    this.usosService.findOne(createSillaDto.uso_id);
-
-    const newSilla = new Silla(
-      this.sillas.length + 1,
-      createSillaDto.nombre,
-      createSillaDto.marca,
-      createSillaDto.precio,
-      createSillaDto.uso_id,
-    );
-    this.sillas.push(newSilla);
-    return newSilla;
+    return this.sillaRepository
+      .save({
+        nombre: createSillaDto.nombre,
+        marca: createSillaDto.marca,
+        precio: createSillaDto.precio,
+        uso: { id: createSillaDto.uso_id },
+      })
+      .catch((error) => {
+        throw new NotFoundException(
+          `Error al guardar la silla en la base de datos: ${error.message}`,
+        );
+      });
   }
 
   findAll() {
-    return this.sillas;
+    return this.sillaRepository
+      .find({ relations: { uso: true } })
+      .catch((error) => {
+        throw new NotFoundException(
+          `Error al obtener las sillas de la base de datos: ${error.message}`,
+        );
+      });
   }
 
   findOne(id: number) {
-    const silla = this.sillas.find((silla) => silla.id === id);
-    if (!silla) {
-      throw new NotFoundException(`La silla con ID ${id} no existe.`);
-    }
-    return silla;
+    return this.sillaRepository
+      .findOne({ where: { id }, relations: { uso: true } })
+      .catch((error) => {
+        throw new NotFoundException(
+          `Error al obtener la silla de la base de datos: ${error.message}`,
+        );
+      });
   }
 
-  update(id: number, updateSillaDto: UpdateSillaDto) {
-    const silla = this.sillas.find((silla) => silla.id === id);
-    if (!silla) {
-      throw new NotFoundException(`La silla con ID ${id} no existe.`);
+  async update(id: number, updateSillaDto: UpdateSillaDto) {
+    const { uso_id, ...datos } = updateSillaDto;
+
+    if (uso_id !== undefined) {
+      await this.usosService.findOne(uso_id);
     }
 
-    if (updateSillaDto.uso_id !== undefined) {
-      this.usosService.findOne(updateSillaDto.uso_id);
+    const result = await this.sillaRepository
+      .update(id, {
+        ...datos,
+        ...(uso_id !== undefined ? { uso: { id: uso_id } } : {}),
+      })
+      .catch((error) => {
+        throw new NotFoundException(
+          `Error al actualizar la silla en la base de datos: ${error.message}`,
+        );
+      });
+    if (result.affected === 0) {
+      throw new NotFoundException(`Silla con id ${id} no encontrada.`);
     }
-
-    silla.nombre =
-      typeof updateSillaDto.nombre === 'string'
-        ? updateSillaDto.nombre
-        : silla.nombre;
-    silla.marca =
-      typeof updateSillaDto.marca === 'string'
-        ? updateSillaDto.marca
-        : silla.marca;
-    silla.precio =
-      typeof updateSillaDto.precio === 'number'
-        ? updateSillaDto.precio
-        : silla.precio;
-    silla.uso_id =
-      typeof updateSillaDto.uso_id === 'number'
-        ? updateSillaDto.uso_id
-        : silla.uso_id;
-
-    return silla;
+    return this.findOne(id);
   }
 
-  remove(id: number) {
-    const index = this.sillas.findIndex((silla) => silla.id === id);
-    if (index === -1) {
-      throw new NotFoundException(`La silla con ID ${id} no existe.`);
+  async remove(id: number) {
+    const silla = await this.findOne(id);
+    if (!silla) {
+      throw new NotFoundException(`Silla con id ${id} no encontrada.`);
     }
-    this.sillas.splice(index, 1);
-    return `La silla con ID ${id} ha sido eliminada.`;
+    await this.sillaRepository.delete(id).catch((error) => {
+      throw new NotFoundException(
+        `Error al eliminar la silla de la base de datos: ${error.message}`,
+      );
+    });
+    return {
+      message: `Silla ${silla.nombre} eliminada exitosamente.`,
+      status: 'success',
+    };
   }
 }

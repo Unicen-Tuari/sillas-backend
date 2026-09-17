@@ -20,7 +20,9 @@ export class UsosService {
   }
 
   findAll() {
-    return this.usoRepository.find().catch((error) => {
+    return this.usoRepository
+      .find({ relations: { sillas: true } })
+      .catch((error) => {
       throw new NotFoundException(
         `Error al obtener los usos de la base de datos: ${error.message}`,
       );

@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsosModule } from './usos/usos.module';
-import { TypeOrmModule } from 'node_modules/@nestjs/typeorm/dist/typeorm.module';
+import { SillasModule } from './sillas/sillas.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
     UsosModule,
+    SillasModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',

@@ -1,21 +1,27 @@
-export class Silla {
-  id: number;
-  nombre: string;
-  marca: string;
-  precio: number;
-  uso_id: number;
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Uso } from '../../usos/entities/uso.entity';
 
-  constructor(
-    id: number,
-    nombre: string,
-    marca: string,
-    precio: number,
-    uso_id: number,
-  ) {
-    this.id = id;
-    this.nombre = nombre;
-    this.marca = marca;
-    this.precio = precio;
-    this.uso_id = uso_id;
-  }
+@Entity()
+export class Silla {
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column()
+  nombre!: string;
+
+  @Column()
+  marca!: string;
+
+  @Column('decimal')
+  precio!: number;
+
+  @ManyToOne(() => Uso, (uso) => uso.sillas)
+  @JoinColumn({ name: 'uso_id' })
+  uso!: Uso;
 }
